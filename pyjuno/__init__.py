@@ -1,16 +1,9 @@
 import awkward.contents
 import awkward.forms
 import awkward.index
-from uproot_custom import (
-    AsCustom,
-    Factory,
-    GroupFactory,
-    registered_factories,
-    build_factory,
-)
+from uproot_custom import AsCustom, Factory, GroupFactory, build_factory, registered_factories
 
-
-from pyjuno.pyjuno_cpp import JMSmartRefReader, AnyJMClassReader
+from pyjuno.pyjuno_cpp import AnyJMClassReader, JMSmartRefReader
 
 AsCustom.target_branches |= {
     "/Event/Gen/GenHeader:GenHeader/m_event",
