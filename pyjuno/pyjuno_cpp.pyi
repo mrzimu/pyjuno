@@ -1,0 +1,6 @@
+import numpy as np
+from uproot_custom.cpp import IReader
+
+class JMSmartRefReader(IReader):
+    def __init__(self, name: str): ...
+    def data(self) -> tuple[np.ndarray, np.ndarray]: ...
