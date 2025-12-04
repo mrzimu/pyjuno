@@ -53,3 +53,6 @@ write_to = "pyjuno/_version.py"
 
 [tool.uv]
 default-groups = "all"
+
+[tool.ruff]
+exclude = ["tests"]
