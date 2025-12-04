@@ -1,15 +1,41 @@
-from uproot_custom import Factory, registered_factories
-import awkward as ak
 import awkward.contents
-import awkward.index
 import awkward.forms
-from pyjuno.pyjuno_cpp import JMSmartRefReader
+import awkward.index
+from uproot_custom import (
+    AsCustom,
+    Factory,
+    GroupFactory,
+    registered_factories,
+    build_factory,
+)
+
+
+from pyjuno.pyjuno_cpp import JMSmartRefReader, AnyJMClassReader
+
+AsCustom.target_branches |= {
+    "/Event/Gen/GenHeader:GenHeader/m_event",
+    # GenEvt is not supported.
+    "/Event/Sim/SimHeader:SimHeader/m_event",
+    "/Event/Sim/SimEvt:SimEvt/m_tracks",
+    "/Event/Sim/SimEvt:SimEvt/m_vertices",
+    "/Event/Sim/SimEvt:SimEvt/m_cd_hits",
+    "/Event/Sim/SimEvt:SimEvt/m_wp_hits",
+    "/Event/Sim/SimEvt:SimEvt/m_tt_hits",
+}
 
 
 class JMSmartRefFactory(Factory):
     """
     Factory for JM::SmartRef objects.
     """
+
+    @classmethod
+    def priority(cls) -> int:
+        """
+        Return the call priority of this factory. Factories with higher
+        priority will be called first.
+        """
+        return 50
 
     @classmethod
     def build_factory(
@@ -48,4 +74,31 @@ class JMSmartRefFactory(Factory):
         )
 
 
+class AnyJMClassFactory(GroupFactory):
+
+    @classmethod
+    def build_factory(
+        cls,
+        top_type_name,
+        cur_streamer_info,
+        all_streamer_info,
+        item_path,
+        **kwargs,
+    ):
+        if not top_type_name.startswith("JM::"):
+            return None
+
+        if top_type_name == "JM::SmartRef":
+            return None
+
+        sub_streamers: list = all_streamer_info[top_type_name]
+        sub_factories = [build_factory(s, all_streamer_info, item_path) for s in sub_streamers]
+        return cls(name=top_type_name, sub_factories=sub_factories)
+
+    def build_cpp_reader(self):
+        sub_readers = [s.build_cpp_reader() for s in self.sub_factories]
+        return AnyJMClassReader(self.name, sub_readers)
+
+
 registered_factories.add(JMSmartRefFactory)
+registered_factories.add(AnyJMClassFactory)

@@ -7,17 +7,18 @@
 #include "uproot-custom/uproot-custom.hh"
 
 using namespace uproot;
+using namespace std;
 
 class JMSmartRefReader : public IReader {
 private:
-  const std::string m_name;
-  std::shared_ptr<std::vector<int64_t>> m_entry;
-  std::shared_ptr<std::vector<uint16_t>> m_pidf;
+  const string m_name;
+  shared_ptr<vector<int64_t>> m_entry;
+  shared_ptr<vector<uint16_t>> m_pidf;
 
 public:
-  JMSmartRefReader(const std::string &name)
-      : IReader(name), m_entry(std::make_shared<std::vector<int64_t>>()),
-        m_pidf(std::make_shared<std::vector<uint16_t>>()) {}
+  JMSmartRefReader(const string &name)
+      : IReader(name), m_entry(make_shared<vector<int64_t>>()),
+        m_pidf(make_shared<vector<uint16_t>>()) {}
 
   void read(BinaryBuffer &buffer) override {
     buffer.skip_TObject();
@@ -32,8 +33,51 @@ public:
   }
 };
 
+class AnyJMClassReader : public IReader {
+private:
+  vector<SharedReader> m_element_readers;
+
+public:
+  AnyJMClassReader(string name, vector<SharedReader> element_readers)
+      : IReader(name), m_element_readers(element_readers) {}
+
+  void read(BinaryBuffer &buffer) override {
+    buffer.read_obj_header();
+    auto fNBytes = buffer.read_fNBytes();
+    auto start_pos = buffer.get_cursor();
+    auto end_pos = buffer.get_cursor() + fNBytes;
+
+    auto fVersion = buffer.read_fVersion();
+
+    for (auto &reader : m_element_readers) {
+      debug_printf("AnyJMClassReader %s: reading %s\n", m_name.c_str(),
+                   reader->name().c_str());
+      debug_printf(buffer);
+      reader->read(buffer);
+    }
+
+    if (buffer.get_cursor() != end_pos) {
+      stringstream msg;
+      msg << "AnyJMClassReader: Invalid read length for " << name()
+          << "! Expect " << end_pos - start_pos << ", got "
+          << buffer.get_cursor() - start_pos;
+      throw std::runtime_error(msg.str());
+    }
+  }
+
+  py::object data() const override {
+    py::list res;
+    for (auto &reader : m_element_readers) {
+      res.append(reader->data());
+    }
+    return res;
+  }
+};
+
 PYBIND11_MODULE(pyjuno_cpp, m) {
   IMPORT_UPROOT_CUSTOM_CPP;
 
-  declare_reader<JMSmartRefReader, std::string>(m, "JMSmartRefReader");
+  declare_reader<JMSmartRefReader, string>(m, "JMSmartRefReader");
+  declare_reader<AnyJMClassReader, string, vector<SharedReader>>(
+      m, "AnyJMClassReader");
 }
