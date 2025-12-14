@@ -67,6 +67,25 @@ class AnyJMClassReader : public IReader {
         }
     }
 
+    uint32_t read_many_memberwise( BinaryBuffer& buffer, const int64_t count ) override {
+        if ( count < 0 )
+        {
+            stringstream msg;
+            msg << name() << "::read_many_memberwise with negative count: " << count;
+            throw std::runtime_error( msg.str() );
+        }
+
+        for ( auto& reader : m_element_readers )
+        {
+            debug_printf( "AnyJMClassReader %s: reading memberwise %s\n", m_name.c_str(),
+                          reader->name().c_str() );
+            debug_printf( buffer );
+            reader->read_many( buffer, count );
+        }
+
+        return count;
+    }
+
     py::object data() const override {
         py::list res;
         for ( auto& reader : m_element_readers ) { res.append( reader->data() ); }
@@ -96,6 +115,14 @@ class AnyCLHEPClassReader : public IReader {
                           reader->name().c_str() );
             debug_printf( buffer );
             reader->read( buffer );
+        }
+
+        if ( buffer.get_cursor() != end_pos )
+        {
+            stringstream msg;
+            msg << "AnyCLHEPClassReader: Invalid read length for " << name() << "! Expect "
+                << end_pos - start_pos << ", got " << buffer.get_cursor() - start_pos;
+            throw std::runtime_error( msg.str() );
         }
     }
 
