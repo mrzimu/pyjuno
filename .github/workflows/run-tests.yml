@@ -9,13 +9,13 @@ on:
   workflow_call:
 
 jobs:
-  run-pytest:
+  test-windows-and-macos:
     name: Test for ${{ matrix.os }}-${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -34,19 +34,26 @@ jobs:
           pytest --version
           pytest -v tests/
 
-  run-pre-commit:
-    name: Run pre-commit
-    runs-on: ubuntu-latest
+  test-ubuntu:
+    name: Test for ubuntu-25.10-${{ matrix.python-version }}
+    runs-on: self-hosted
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: astral-sh/setup-uv@v5
         with:
-          python-version: 3.13
+          python-version: ${{ matrix.python-version }}
 
-      - name: Install pre-commit
+      - name: Install dependencies
         run: |
-          uv pip install pre-commit
+          uv lock --upgrade
+          uv sync --group dev
 
-      - name: Run pre-commit
-        run: pre-commit run --all
+      - name: Run tests
+        run: |
+          pytest --version
+          pytest -v tests/
