@@ -9,37 +9,13 @@ on:
   workflow_call:
 
 jobs:
-  test-windows-and-macos:
+  run-pytest:
     name: Test for ${{ matrix.os }}-${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        os: [windows-latest, macos-latest]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: astral-sh/setup-uv@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: |
-          uv lock --upgrade
-          uv sync --group dev
-
-      - name: Run tests
-        run: |
-          pytest --version
-          pytest -v tests/
-
-  test-ubuntu:
-    name: Test for ubuntu-25.10-${{ matrix.python-version }}
-    runs-on: self-hosted
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        os: [windows-latest, macos-latest, self-hosted]
 
     steps:
       - uses: actions/checkout@v4
