@@ -67,6 +67,84 @@ class AnyJMClassReader : public IReader {
         }
     }
 
+    uint32_t read_many_memberwise( BinaryBuffer& buffer, const int64_t count ) override {
+        if ( count < 0 )
+        {
+            stringstream msg;
+            msg << name() << "::read_many_memberwise with negative count: " << count;
+            throw std::runtime_error( msg.str() );
+        }
+
+        for ( auto& reader : m_element_readers )
+        {
+            debug_printf( "AnyJMClassReader %s: reading memberwise %s\n", m_name.c_str(),
+                          reader->name().c_str() );
+            debug_printf( buffer );
+            reader->read_many( buffer, count );
+        }
+
+        return count;
+    }
+
+    py::object data() const override {
+        py::list res;
+        for ( auto& reader : m_element_readers ) { res.append( reader->data() ); }
+        return res;
+    }
+};
+
+class AnyCLHEPClassReader : public IReader {
+  private:
+    vector<SharedReader> m_element_readers; ///< The element readers for the Any class.
+
+  public:
+    AnyCLHEPClassReader( string name, vector<SharedReader> element_readers )
+        : IReader( name ), m_element_readers( element_readers ) {}
+
+    void read( BinaryBuffer& buffer ) override {
+        auto fNBytes   = buffer.read_fNBytes();
+        auto start_pos = buffer.get_cursor();
+        auto end_pos   = buffer.get_cursor() + fNBytes;
+
+        auto fVersion = buffer.read_fVersion();
+        buffer.skip( 4 ); // unknown
+
+        for ( auto& reader : m_element_readers )
+        {
+            debug_printf( "AnyCLHEPClassReader %s: reading %s\n", m_name.c_str(),
+                          reader->name().c_str() );
+            debug_printf( buffer );
+            reader->read( buffer );
+        }
+
+        if ( buffer.get_cursor() != end_pos )
+        {
+            stringstream msg;
+            msg << "AnyCLHEPClassReader: Invalid read length for " << name() << "! Expect "
+                << end_pos - start_pos << ", got " << buffer.get_cursor() - start_pos;
+            throw std::runtime_error( msg.str() );
+        }
+    }
+
+    uint32_t read_many_memberwise( BinaryBuffer& buffer, const int64_t count ) override {
+        if ( count < 0 )
+        {
+            stringstream msg;
+            msg << name() << "::read_many_memberwise with negative count: " << count;
+            throw std::runtime_error( msg.str() );
+        }
+
+        for ( auto& reader : m_element_readers )
+        {
+            debug_printf( "AnyCLHEPClassReader %s: reading memberwise %s\n", m_name.c_str(),
+                          reader->name().c_str() );
+            debug_printf( buffer );
+            reader->read_many( buffer, count );
+        }
+
+        return count;
+    }
+
     py::object data() const override {
         py::list res;
         for ( auto& reader : m_element_readers ) { res.append( reader->data() ); }
@@ -79,4 +157,6 @@ PYBIND11_MODULE( pyjuno_cpp, m ) {
 
     declare_reader<JMSmartRefReader, string>( m, "JMSmartRefReader" );
     declare_reader<AnyJMClassReader, string, vector<SharedReader>>( m, "AnyJMClassReader" );
+    declare_reader<AnyCLHEPClassReader, string, vector<SharedReader>>( m,
+                                                                       "AnyCLHEPClassReader" );
 }

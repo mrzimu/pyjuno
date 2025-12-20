@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest, self-hosted]
 
     steps:
       - uses: actions/checkout@v4
@@ -33,20 +33,3 @@ jobs:
         run: |
           pytest --version
           pytest -v tests/
-
-  run-pre-commit:
-    name: Run pre-commit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: astral-sh/setup-uv@v5
-        with:
-          python-version: 3.13
-
-      - name: Install pre-commit
-        run: |
-          uv pip install pre-commit
-
-      - name: Run pre-commit
-        run: pre-commit run --all

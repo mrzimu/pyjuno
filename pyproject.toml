@@ -1,9 +1,9 @@
 [build-system]
 build-backend = "scikit_build_core.build"
-requires = ["scikit-build-core", "pybind11==3.0.*", "uproot-custom==2.1.*"]
+requires = ["scikit-build-core", "pybind11==3.0.*", "uproot-custom>=2.1.1,<2.2"]
 
 [dependency-groups]
-dev = ["black", "pytest", "pre-commit", "ipykernel"]
+dev = ["black", "pytest", "pytest-subtests", "pre-commit", "ipykernel"]
 test = ["pytest"]
 
 [project]
@@ -28,7 +28,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-dependencies = ["uproot>=5.6.8", "awkward", "uproot-custom==2.1.*"]
+dependencies = ["uproot>=5.6.8", "awkward", "uproot-custom>=2.1.1,<2.2"]
 description = "Standalone Python module for JUNO"
 dynamic = ["version"]
 name = "pyjuno"
