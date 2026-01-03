@@ -1,8 +1,19 @@
+import awkward as ak
 import awkward.contents
 import awkward.forms
 import awkward.index
-from uproot_custom import AsCustom, Factory, GroupFactory, build_factory, registered_factories
-from uproot_custom.factories import ObjectHeaderFactory
+import numpy as np
+import uproot.model
+import uproot_custom.cpp
+from uproot_custom import (
+    AsCustom,
+    Factory,
+    GroupFactory,
+    ObjectHeaderFactory,
+    build_factory,
+    registered_factories,
+)
+
 from pyjuno.pyjuno_cpp import AnyCLHEPClassReader, AnyJMClassReader, JMSmartRefReader
 
 AsCustom.target_branches |= {
@@ -140,6 +151,8 @@ class AnyJMClassFactory(GroupFactory):
         "JM::EventObject",
         "JM::TrackElecTruth",
         "JM::SmartRef",
+        "JM::FileMetaData",
+        "JM::UniqueIDTable",
     }
 
     @classmethod
@@ -188,6 +201,68 @@ class AnyCLHEPClassFactory(GroupFactory):
         return AnyCLHEPClassReader(self.name, sub_readers)
 
 
+class Model_JM_3a3a_FileMetaData(uproot.model.Model):
+    def read_members(self, chunk, cursor, context, file):
+        all_streamer_info: dict[str, list[dict]] = {}
+        for k, v in file.streamers.items():
+            cur_infos = [i.all_members for i in next(iter(v.values())).member("fElements")]
+            all_streamer_info[k] = cur_infos
+
+        s = file.streamers["JM::FileMetaData"][1]
+        cls_streamer_info = {
+            "fName": s.typename,
+            "fTypeName": s.typename,
+        }
+
+        fac = build_factory(cls_streamer_info, all_streamer_info)
+        reader = fac.build_cpp_reader()
+        raw_data = uproot_custom.cpp.read_data(
+            chunk.raw_data,
+            np.array([0, len(chunk.raw_data)], dtype=np.int64),
+            reader,
+        )
+        out = ak.Array(fac.make_awkward_content(raw_data))[0].tolist()
+        self._members = out
+        cursor.skip(len(chunk.raw_data) - cursor.index)
+
+
+class Model_JM_3a3a_UniqueIDTable(uproot.model.Model):
+    def read_members(self, chunk, cursor, context, file):
+        all_streamer_info: dict[str, list[dict]] = {}
+        for k, v in file.streamers.items():
+            cur_infos = [i.all_members for i in next(iter(v.values())).member("fElements")]
+            all_streamer_info[k] = cur_infos
+
+        s = file.streamers["JM::UniqueIDTable"][1]
+        cls_streamer_info = {
+            "fName": s.typename,
+            "fTypeName": s.typename,
+        }
+
+        fac = build_factory(cls_streamer_info, all_streamer_info)
+        reader = fac.build_cpp_reader()
+        raw_data = uproot_custom.cpp.read_data(
+            chunk.raw_data,
+            np.array([0, len(chunk.raw_data)], dtype=np.int64),
+            reader,
+        )
+        out = ak.Array(fac.make_awkward_content(raw_data))[0]
+
+        res = {}
+        for row in out["m_tables"]:
+            key = row["key"]
+            val = row["val"]
+            tmp_res = {}
+            for sub_key in val.fields:
+                tmp_res[sub_key] = val[sub_key]
+            res[key] = tmp_res
+
+        self._members = {"m_tables": res}
+        cursor.skip(len(chunk.raw_data) - cursor.index)
+
+
 registered_factories.add(JMSmartRefFactory)
 registered_factories.add(AnyJMClassFactory)
 registered_factories.add(AnyCLHEPClassFactory)
+uproot.classes["JM::FileMetaData"] = Model_JM_3a3a_FileMetaData
+uproot.classes["JM::UniqueIDTable"] = Model_JM_3a3a_UniqueIDTable

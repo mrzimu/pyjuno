@@ -35,3 +35,9 @@ def test_self_hosted_files(fpath, trees_to_test: set[str], subtests):
 
         with subtests.test(tree=tree_name):
             f[tree_name].arrays(entry_stop=10)
+
+
+def test_metadata(f_sim):
+    f_sim["Meta/navigator"].arrays()
+    f_sim["Meta/FileMetaData"].all_members
+    f_sim["Meta/UniqueIDTable"].all_members
