@@ -1,7 +1,10 @@
+import warnings
+
 import awkward as ak
 import awkward.contents
 import awkward.forms
 import awkward.index
+import numba as nb
 import numpy as np
 import uproot.model
 import uproot_custom.cpp
@@ -266,3 +269,97 @@ registered_factories.add(AnyJMClassFactory)
 registered_factories.add(AnyCLHEPClassFactory)
 uproot.classes["JM::FileMetaData"] = Model_JM_3a3a_FileMetaData
 uproot.classes["JM::UniqueIDTable"] = Model_JM_3a3a_UniqueIDTable
+
+
+navpath_to_treename = {
+    "/Event/CdLpmtCalib": "CdLpmtCalibEvt",
+    "/Event/CdLpmtTruth": "CdLpmtElecTruthEvt",
+    "/Event/CdSpmtCalib": "CdSpmtCalibEvt",
+    "/Event/CdSpmtElec": "CdSpmtElecEvt",
+    "/Event/CdSpmtTruth": "CdSpmtElecTruthEvt",
+    "/Event/CdTrackRecClassify": "CdTrackRecEvt",
+    "/Event/CdVertexRec": "CdVertexRecEvt",
+    "/Event/CdVertexRecJVertex": "CdVertexRecEvt",
+    "/Event/CdVertexRecMixedPhase": "CdVertexRecEvt",
+    "/Event/CdVertexRecOMILREC": "CdVertexRecEvt",
+    "/Event/CdVertexRecOMILREC_JVtx": "CdVertexRecEvt",
+    "/Event/CdVertexRecOMILREC_MPV": "CdVertexRecEvt",
+    "/Event/Sim": "SimEvt",
+    "/Event/TrackTruth": "TrackElecTruthEvt",
+    "/Event/WpCalib": "WpCalibEvt",
+    "/Event/WpRec": "WpRecEvt",
+}
+
+
+@nb.njit(cache=True)
+def entry2count(ref_entries, n_cols):
+    res = np.zeros((len(ref_entries), n_cols), dtype=np.int64)
+    for i, row in enumerate(ref_entries):
+        for j, val in enumerate(row):
+            res[i, j] = 0 if val == -1 else 1
+    return res
+
+
+def assemble_event(
+    file,
+    filter_path: list[str] = None,
+    entry_start: int = None,
+    entry_stop: int = None,
+) -> ak.Array:
+    """
+    Assemble all events according to the navigator information.
+
+    Arguments:
+        file: uproot.open(...) object
+        filter_path: list of nav paths to include. If None, include all available paths.
+
+    Returns:
+        An Awkward Array of assembled events.
+    """
+    nav_paths = file["Meta/FileMetaData"].member("m_NavPath")
+
+    ref_entry = file["Meta/navigator/m_refs"].array()["entry"]
+    n_cols = ak.max(ak.count(ref_entry, axis=1))
+
+    assert n_cols == len(nav_paths)
+
+    ref_counts = entry2count(ref_entry, n_cols)
+    exist_idx = [i for i, d in enumerate(nav_paths) if d in file]
+
+    entry_start = 0 if entry_start is None else entry_start
+    entry_stop = ref_counts.shape[0] if entry_stop is None else entry_stop
+
+    res = {}
+    for i in exist_idx:
+        navpath = nav_paths[i]
+        if filter_path is not None and navpath not in filter_path:
+            continue
+
+        cur_entry_start = 0
+        cur_entry_stop = ref_counts[:, i].sum()
+        if entry_start is not None:
+            cur_entry_start = ref_counts[:entry_start, i].sum()
+        if entry_stop is not None:
+            cur_entry_stop = ref_counts[:entry_stop, i].sum()
+
+        treename = navpath_to_treename.get(navpath)
+        if treename is None:
+            warnings.warn(f"Cannot find treename for navpath {navpath}, skip.", UserWarning)
+            continue
+
+        raw_array = file[f"{navpath}/{treename}"].arrays(
+            entry_start=cur_entry_start,
+            entry_stop=cur_entry_stop,
+        )
+
+        if len(raw_array.fields) == 1:
+            raw_array = raw_array[raw_array.fields[0]]
+
+        # unflatten according to ref_counts
+        counts = ref_counts[entry_start:entry_stop, i]
+        res[treename] = ak.unflatten(raw_array, counts)
+
+    return ak.Array(res)
+
+
+__all__ = ["assemble_event"]

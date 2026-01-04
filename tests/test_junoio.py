@@ -41,3 +41,11 @@ def test_metadata(f_sim):
     f_sim["Meta/navigator"].arrays()
     f_sim["Meta/FileMetaData"].all_members
     f_sim["Meta/UniqueIDTable"].all_members
+
+
+def test_assemble_event(f_sim):
+    with pytest.warns(UserWarning):
+        pyjuno.assemble_event(f_sim)
+        pyjuno.assemble_event(f_sim, entry_start=5)
+        pyjuno.assemble_event(f_sim, entry_stop=10)
+        pyjuno.assemble_event(f_sim, entry_start=5, entry_stop=10)
