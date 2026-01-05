@@ -1,4 +1,5 @@
 import warnings
+from typing import Union
 
 import awkward as ak
 import awkward.contents
@@ -8,6 +9,7 @@ import numba as nb
 import numpy as np
 import uproot.model
 import uproot_custom.cpp
+from uproot._util import regularize_filter
 from uproot_custom import (
     AsCustom,
     Factory,
@@ -278,6 +280,7 @@ navpath_to_treename = {
     "/Event/CdSpmtElec": "CdSpmtElecEvt",
     "/Event/CdSpmtTruth": "CdSpmtElecTruthEvt",
     "/Event/CdTrackRecClassify": "CdTrackRecEvt",
+    "/Event/CdTrigger": "CdTriggerEvt",
     "/Event/CdVertexRec": "CdVertexRecEvt",
     "/Event/CdVertexRecJVertex": "CdVertexRecEvt",
     "/Event/CdVertexRecMixedPhase": "CdVertexRecEvt",
@@ -302,7 +305,7 @@ def entry2count(ref_entries, n_cols):
 
 def assemble_event(
     file,
-    filter_path: list[str] = None,
+    filter_path: Union[str, list[str]] = None,
     entry_start: int = None,
     entry_stop: int = None,
 ) -> ak.Array:
@@ -311,7 +314,7 @@ def assemble_event(
 
     Arguments:
         file: uproot.open(...) object
-        filter_path: list of nav paths to include. If None, include all available paths.
+        filter_path: wildcards, or a list of nav paths to include. If None, include all available paths.
 
     Returns:
         An Awkward Array of assembled events.
@@ -329,10 +332,12 @@ def assemble_event(
     entry_start = 0 if entry_start is None else entry_start
     entry_stop = ref_counts.shape[0] if entry_stop is None else entry_stop
 
+    reg_filter = regularize_filter(filter_path)
+
     res = {}
     for i in exist_idx:
         navpath = nav_paths[i]
-        if filter_path is not None and navpath not in filter_path:
+        if not reg_filter(navpath):
             continue
 
         cur_entry_start = 0
@@ -342,9 +347,16 @@ def assemble_event(
         if entry_stop is not None:
             cur_entry_stop = ref_counts[:entry_stop, i].sum()
 
+        if navpath == "/Event/Gen":  # /Event/Gen is not supported
+            continue
+
         treename = navpath_to_treename.get(navpath)
         if treename is None:
-            warnings.warn(f"Cannot find treename for navpath {navpath}, skip.", UserWarning)
+            warnings.warn(
+                f"Cannot find treename for navpath {navpath}, skip.",
+                UserWarning,
+                stacklevel=0,
+            )
             continue
 
         raw_array = file[f"{navpath}/{treename}"].arrays(
@@ -359,7 +371,16 @@ def assemble_event(
         counts = ref_counts[entry_start:entry_stop, i]
         res[treename] = ak.unflatten(raw_array, counts)
 
-    return ak.Array(res)
+    if len(res) == 0:
+        return ak.Array(
+            ak.contents.RecordArray(
+                [],
+                [],
+                length=entry_stop - entry_start,
+            )
+        )
+    else:
+        return ak.Array(res)
 
 
 __all__ = ["assemble_event"]
