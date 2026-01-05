@@ -2,7 +2,7 @@
 
 Pyjuno is a Python package that helps JUNO users analyzing data more easily. The core functionality of pyjuno is its JUNO-specific format data reading.
 
-> ![WARNING]
+> [!WARNING]
 > This package is still under developing.
 
 ## Installation
