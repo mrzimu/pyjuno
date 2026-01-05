@@ -28,7 +28,12 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-dependencies = ["uproot>=5.6.8", "awkward", "uproot-custom>=2.1.1,<2.2"]
+dependencies = [
+    "uproot>=5.6.8",
+    "awkward",
+    "uproot-custom>=2.1.1,<2.2",
+    "numba",
+]
 description = "Standalone Python module for JUNO"
 dynamic = ["version"]
 name = "pyjuno"

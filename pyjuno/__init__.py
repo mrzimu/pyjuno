@@ -1,3 +1,3 @@
-from . import junoio
+from pyjuno.junoio import assemble_event
 
-__all__ = ["junoio"]
+__all__ = ["assemble_event"]
