@@ -5,6 +5,7 @@ requires = ["scikit-build-core", "pybind11==3.0.*", "uproot-custom>=2.1.1,<2.2"]
 [dependency-groups]
 dev = ["black", "pytest", "pytest-subtests", "pre-commit", "ipykernel"]
 test = ["pytest"]
+ipynb = ["ipykernel"]
 
 [project]
 authors = [
