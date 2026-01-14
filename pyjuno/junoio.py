@@ -58,6 +58,8 @@ AsCustom.target_branches |= {
     "/Event/CdSpmtElec/CdSpmtElecEvt:CdSpmtElecEvt/m_SpmtBlocks",
     "/Event/CdSpmtElec/CdSpmtElecEvt:CdSpmtElecEvt/m_SpmtSpecialWords",
     "/Event/CdSpmtElec/CdSpmtElecEvt:CdSpmtElecEvt/m_channelData",
+    # CdWaveform
+    "/Event/CdWaveform/CdWaveformEvt:CdWaveformEvt/m_channelData",
     # CdTrigger
     "/Event/CdTrigger/CdTriggerHeader:CdTriggerHeader/m_event",
     # CdVertexRec
