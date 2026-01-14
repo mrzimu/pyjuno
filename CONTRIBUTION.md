@@ -21,6 +21,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 ```shell
 python3 -m venv .venv
+source .venv/bin/activate
 uv sync
 ```
 
