@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import warnings
+import re
 from typing import Union
 
 import awkward as ak
@@ -9,7 +9,9 @@ import awkward.forms
 import awkward.index
 import numba as nb
 import numpy as np
+import uproot.behaviors.TTree
 import uproot.model
+import uproot.reading
 import uproot_custom.cpp
 from uproot._util import regularize_filter
 from uproot_custom import (
@@ -22,81 +24,6 @@ from uproot_custom import (
 )
 
 from pyjuno.pyjuno_cpp import AnyCLHEPClassReader, AnyJMClassReader, JMSmartRefReader
-
-AsCustom.target_branches |= {
-    # Meta
-    "/Meta/navigator:EvtNavigator/m_refs",
-    # Gen
-    "/Event/Gen/GenHeader:GenHeader/m_event",
-    # Sim
-    "/Event/Sim/SimHeader:SimHeader/m_event",
-    "/Event/Sim/SimEvt:SimEvt/m_tracks",
-    "/Event/Sim/SimEvt:SimEvt/m_vertices",
-    "/Event/Sim/SimEvt:SimEvt/m_cd_hits",
-    "/Event/Sim/SimEvt:SimEvt/m_wp_hits",
-    "/Event/Sim/SimEvt:SimEvt/m_tt_hits",
-    # WpCalib
-    "/Event/WpCalib/WpCalibHeader:WpCalibHeader/m_event",
-    "/Event/WpCalib/WpCalibEvt:WpCalibEvt/m_calibPMTCol",
-    # CdLpmtCalib
-    "/Event/CdLpmtCalib/CdLpmtCalibHeader:CdLpmtCalibHeader/m_event",
-    "/Event/CdLpmtCalib/CdLpmtCalibEvt:CdLpmtCalibEvt/m_calibPMTCol",
-    # CdSpmtCalib
-    "/Event/CdSpmtCalib/CdSpmtCalibHeader:CdSpmtCalibHeader/m_event",
-    "/Event/CdSpmtCalib/CdSpmtCalibEvt:CdSpmtCalibEvt/m_calibPMTCol",
-    # CdLpmtTruth
-    "/Event/CdLpmtTruth/CdLpmtElecTruthHeader:CdLpmtElecTruthHeader/m_event",
-    "/Event/CdLpmtTruth/CdLpmtElecTruthEvt:CdLpmtElecTruthEvt/m_truths",
-    # CdSpmtTruth
-    "/Event/CdSpmtTruth/CdSpmtElecTruthHeader:CdSpmtElecTruthHeader/m_event",
-    "/Event/CdSpmtTruth/CdSpmtElecTruthEvt:CdSpmtElecTruthEvt/m_truths",
-    # TrackTruth
-    "/Event/TrackTruth/TrackElecTruthHeader:TrackElecTruthHeader/m_event",
-    "/Event/TrackTruth/TrackElecTruthEvt:TrackElecTruthEvt/m_truths",
-    # CdSpmtElec
-    "/Event/CdSpmtElec/CdSpmtElecHeader:CdSpmtElecHeader/m_event",
-    "/Event/CdSpmtElec/CdSpmtElecEvt:CdSpmtElecEvt/m_SpmtBlocks",
-    "/Event/CdSpmtElec/CdSpmtElecEvt:CdSpmtElecEvt/m_SpmtSpecialWords",
-    "/Event/CdSpmtElec/CdSpmtElecEvt:CdSpmtElecEvt/m_channelData",
-    # CdWaveform
-    "/Event/CdWaveform/CdWaveformEvt:CdWaveformEvt/m_channelData",
-    # CdTrigger
-    "/Event/CdTrigger/CdTriggerHeader:CdTriggerHeader/m_event",
-    # CdVertexRec
-    "/Event/CdVertexRec/CdVertexRecHeader:CdVertexRecHeader/m_event",
-    "/Event/CdVertexRec/CdVertexRecEvt:CdVertexRecEvt/m_vertices",
-    # CdVertexRecJVertex
-    "/Event/CdVertexRecJVertex/CdVertexRecHeader:CdVertexRecHeader/m_event",
-    "/Event/CdVertexRecJVertex/CdVertexRecEvt:CdVertexRecEvt/m_vertices",
-    # CdVertexRecMixedPhase
-    "/Event/CdVertexRecMixedPhase/CdVertexRecHeader:CdVertexRecHeader/m_event",
-    "/Event/CdVertexRecMixedPhase/CdVertexRecEvt:CdVertexRecEvt/m_vertices",
-    # Muon
-    "/Event/Muon/MuonHeader:MuonHeader/m_event",
-    # Flasher
-    "/Event/Flasher/FlasherHeader:FlasherHeader/m_event",
-    # Oec
-    "/Event/Oec/OecHeader:OecHeader/m_event",
-    # AfterPulse
-    "/Event/AfterPulse/APHeader:APHeader/m_event",
-    # WpRec
-    "/Event/WpRec/WpRecHeader:WpRecHeader/m_event",
-    "/Event/WpRec/WpRecEvt:WpRecEvt/m_tracks",
-    # WpTrigger
-    "/Event/WpTrigger/WpTriggerHeader:WpTriggerHeader/m_event",
-    # CdVertexRecOMILREC
-    "/Event/CdVertexRecOMILREC/CdVertexRecHeader:CdVertexRecHeader/m_event",
-    "/Event/CdVertexRecOMILREC/CdVertexRecEvt:CdVertexRecEvt/m_vertices",
-    # CdVertexRecOMILREC_JVtx
-    "/Event/CdVertexRecOMILREC_JVtx/CdVertexRecHeader:CdVertexRecHeader/m_event",
-    "/Event/CdVertexRecOMILREC_JVtx/CdVertexRecEvt:CdVertexRecEvt/m_vertices",
-    # CdVertexRecOMILREC_MPV
-    "/Event/CdVertexRecOMILREC_MPV/CdVertexRecHeader:CdVertexRecHeader/m_event",
-    "/Event/CdVertexRecOMILREC_MPV/CdVertexRecEvt:CdVertexRecEvt/m_vertices",
-    # CdTrackRecClassify
-    "/Event/CdTrackRecClassify/CdTrackRecHeader:CdTrackRecHeader/m_event",
-    "/Event/CdTrackRecClassify/CdTrackRecEvt:CdTrackRecEvt/m_tracks",
-}
 
 
 class JMSmartRefFactory(Factory):
@@ -210,6 +137,22 @@ class AnyCLHEPClassFactory(GroupFactory):
         return AnyCLHEPClassReader(self.name, sub_readers)
 
 
+class JunoInterpretation(AsCustom):
+    pat_JM = re.compile(r"JM::[a-zA-Z0-9_]+")
+
+    @classmethod
+    def match_branch(cls, branch, context, simplify):
+        if branch.streamer is None:
+            return False
+
+        # Check whether it is a leaf branch
+        if len(branch.member("fBranches")) != 0:
+            return False
+
+        jm_match = cls.pat_JM.search(branch.streamer.typename)
+        return jm_match is not None
+
+
 class Model_JM_3a3a_FileMetaData(uproot.model.Model):
     def read_members(self, chunk, cursor, context, file):
         all_streamer_info: dict[str, list[dict]] = {}
@@ -273,29 +216,31 @@ class Model_JM_3a3a_UniqueIDTable(uproot.model.Model):
 registered_factories.add(JMSmartRefFactory)
 registered_factories.add(AnyJMClassFactory)
 registered_factories.add(AnyCLHEPClassFactory)
+uproot.register_interpretation(JunoInterpretation)
 uproot.classes["JM::FileMetaData"] = Model_JM_3a3a_FileMetaData
 uproot.classes["JM::UniqueIDTable"] = Model_JM_3a3a_UniqueIDTable
 
 
-navpath_to_treename = {
-    "/Event/CdLpmtCalib": "CdLpmtCalibEvt",
-    "/Event/CdLpmtTruth": "CdLpmtElecTruthEvt",
-    "/Event/CdSpmtCalib": "CdSpmtCalibEvt",
-    "/Event/CdSpmtElec": "CdSpmtElecEvt",
-    "/Event/CdSpmtTruth": "CdSpmtElecTruthEvt",
-    "/Event/CdTrackRecClassify": "CdTrackRecEvt",
-    "/Event/CdTrigger": "CdTriggerEvt",
-    "/Event/CdVertexRec": "CdVertexRecEvt",
-    "/Event/CdVertexRecJVertex": "CdVertexRecEvt",
-    "/Event/CdVertexRecMixedPhase": "CdVertexRecEvt",
-    "/Event/CdVertexRecOMILREC": "CdVertexRecEvt",
-    "/Event/CdVertexRecOMILREC_JVtx": "CdVertexRecEvt",
-    "/Event/CdVertexRecOMILREC_MPV": "CdVertexRecEvt",
-    "/Event/Sim": "SimEvt",
-    "/Event/TrackTruth": "TrackElecTruthEvt",
-    "/Event/WpCalib": "WpCalibEvt",
-    "/Event/WpRec": "WpRecEvt",
-}
+def get_event_tree(subevt_dir: uproot.reading.ReadOnlyDirectory):
+    """
+    This function finds the event tree in a sub-event directory.
+    Assuming there is only one header tree and one event tree in the sub-event directory.
+    """
+    # Check tree numbers
+    trees = [
+        tree for tree in subevt_dir.values() if isinstance(tree, uproot.behaviors.TTree.TTree)
+    ]
+    if len(trees) != 2:
+        raise ValueError(f"Expected 2 trees in sub-event directory, found {len(trees)} trees.")
+
+    for tree in subevt_dir.values():
+        if not isinstance(tree, uproot.behaviors.TTree.TTree):
+            continue
+
+        if "m_event" in tree and tree["m_event"].streamer.typename == "JM::SmartRef":
+            continue
+
+        return tree
 
 
 @nb.njit(cache=True)
@@ -354,16 +299,8 @@ def assemble_event(
         if navpath == "/Event/Gen":  # /Event/Gen is not supported
             continue
 
-        treename = navpath_to_treename.get(navpath)
-        if treename is None:
-            warnings.warn(
-                f"Cannot find treename for navpath {navpath}, skip.",
-                UserWarning,
-                stacklevel=0,
-            )
-            continue
-
-        raw_array = file[f"{navpath}/{treename}"].arrays(
+        tree = get_event_tree(file[navpath])
+        raw_array = tree.arrays(
             entry_start=cur_entry_start,
             entry_stop=cur_entry_stop,
         )
@@ -373,7 +310,7 @@ def assemble_event(
 
         # unflatten according to ref_counts
         counts = ref_counts[entry_start:entry_stop, i]
-        res[treename] = ak.unflatten(raw_array, counts)
+        res[tree.name] = ak.unflatten(raw_array, counts)
 
     if len(res) == 0:
         return ak.Array(
