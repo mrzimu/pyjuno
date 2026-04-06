@@ -75,7 +75,7 @@ spec_events = pyjuno.assemble_event(f, filter_path="*pmtTruth")
 ---
 
 > [!NOTE]
-> At present, `GenEvent` is not supported to be read in Python, since it contains recursive data that awkward-array cannot handle with.
+> At present, `GenEvent` is not supported to be read in Python, since it contains recursive data that awkward-array cannot handle.
 
 > [!TIP]
-> For frequently used data, it is more efficient to read them with pyjuno once, then use `ak.to_parquet` to save it as `parquet` format and use `ak.from_parquet` to read it back.
+> For frequently used data, it is more efficient to read it with pyjuno once, then use `ak.to_parquet` to save it in `parquet` format and use `ak.from_parquet` to read it back.
