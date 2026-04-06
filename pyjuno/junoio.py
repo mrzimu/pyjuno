@@ -18,12 +18,12 @@ from uproot_custom import (
     AsCustom,
     Factory,
     GroupFactory,
-    ObjectHeaderFactory,
+    AnyPointerFactory,
     build_factory,
     registered_factories,
 )
 
-from pyjuno.pyjuno_cpp import AnyCLHEPClassReader, AnyJMClassReader, JMSmartRefReader
+from pyjuno.pyjuno_cpp import AnyCLHEPClassReader, JMSmartRefReader
 
 
 class JMSmartRefFactory(Factory):
@@ -52,7 +52,7 @@ class JMSmartRefFactory(Factory):
             return None
 
         if item_path == "/Meta/navigator:EvtNavigator/m_refs.m_refs":
-            return ObjectHeaderFactory(
+            return AnyPointerFactory(
                 name=cur_streamer_info["fName"],
                 element_factory=cls(name=cur_streamer_info["fName"]),
             )
@@ -80,39 +80,6 @@ class JMSmartRefFactory(Factory):
             ],
             ["pidf", "entry"],
         )
-
-
-class AnyJMClassFactory(GroupFactory):
-    class_exceptions = {
-        "JM::EventObject",
-        "JM::TrackElecTruth",
-        "JM::SmartRef",
-        "JM::FileMetaData",
-        "JM::UniqueIDTable",
-    }
-
-    @classmethod
-    def build_factory(
-        cls,
-        top_type_name,
-        cur_streamer_info,
-        all_streamer_info,
-        item_path,
-        **kwargs,
-    ):
-        if not top_type_name.startswith("JM::"):
-            return None
-
-        if top_type_name in cls.class_exceptions:
-            return None
-
-        sub_streamers: list = all_streamer_info[top_type_name]
-        sub_factories = [build_factory(s, all_streamer_info, item_path) for s in sub_streamers]
-        return cls(name=cur_streamer_info["fName"], sub_factories=sub_factories)
-
-    def build_cpp_reader(self):
-        sub_readers = [s.build_cpp_reader() for s in self.sub_factories]
-        return AnyJMClassReader(self.name, sub_readers)
 
 
 class AnyCLHEPClassFactory(GroupFactory):
@@ -171,6 +138,7 @@ class Model_JM_3a3a_FileMetaData(uproot.model.Model):
         raw_data = uproot_custom.cpp.read_data(
             chunk.raw_data,
             np.array([0, len(chunk.raw_data)], dtype=np.int64),
+            0,
             reader,
         )
         out = ak.Array(fac.make_awkward_content(raw_data))[0].tolist()
@@ -196,6 +164,7 @@ class Model_JM_3a3a_UniqueIDTable(uproot.model.Model):
         raw_data = uproot_custom.cpp.read_data(
             chunk.raw_data,
             np.array([0, len(chunk.raw_data)], dtype=np.int64),
+            0,
             reader,
         )
         out = ak.Array(fac.make_awkward_content(raw_data))[0]
@@ -214,7 +183,6 @@ class Model_JM_3a3a_UniqueIDTable(uproot.model.Model):
 
 
 registered_factories.add(JMSmartRefFactory)
-registered_factories.add(AnyJMClassFactory)
 registered_factories.add(AnyCLHEPClassFactory)
 uproot.register_interpretation(JunoInterpretation)
 uproot.classes["JM::FileMetaData"] = Model_JM_3a3a_FileMetaData
