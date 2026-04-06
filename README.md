@@ -18,9 +18,6 @@ pip install pyjuno
 
 Basing on [Uproot](https://uproot.readthedocs.io/), [uproot-custom](https://mrzimu.github.io/uproot-custom/index.html) and [awkward-array](https://awkward-array.org/doc/main/user-guide/index.html), pyjuno can read most of JUNO-specific data format without ROOT or junosw environment.
 
-> [!NOTE]
-> At present, `GenEvent` is not supported to be read in Python, since it contains recursive data that awkward-array cannot handle with.
-
 ### Standalone subevent reading
 
 ```python
@@ -74,3 +71,11 @@ spec_events = pyjuno.assemble_event(f, filter_path=["/Event/CdLpmtTruth", "/Even
 # or
 spec_events = pyjuno.assemble_event(f, filter_path="*pmtTruth")
 ```
+
+---
+
+> [!NOTE]
+> At present, `GenEvent` is not supported to be read in Python, since it contains recursive data that awkward-array cannot handle with.
+
+> [!TIP]
+> For frequently used data, it is more efficient to read them with pyjuno once, then use `ak.to_parquet` to save it as `parquet` format and use `ak.from_parquet` to read it back.

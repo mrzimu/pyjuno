@@ -9,8 +9,6 @@ ipynb = ["ipykernel"]
 [project]
 authors = [
     { name = "Mingrun Li", email = "mrli@ihep.ac.cn" },
-    { name = "Mingxia Sun", email = "sunmx@ihep.ac.cn" },
-    { name = "Peidong Yu", email = "yupd@ihep.ac.cn" },
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
