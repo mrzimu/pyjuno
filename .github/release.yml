@@ -1,0 +1,12 @@
+changelog:
+  categories:
+    - title: New Features
+      labels:
+        - feature
+    - title: Bug Fixes and Performance Improvements
+      labels:
+        - bug fix
+        - performance
+    - title: Other Changes
+      labels:
+        - '*'
