@@ -4,7 +4,7 @@ import pytest
 import uproot
 import uproot_custom
 
-import pyjuno
+import pyjuno  # noqa: F401
 
 
 @pytest.fixture(scope="session")
@@ -13,8 +13,13 @@ def data_dir():
 
 
 @pytest.fixture(scope="session")
-def f_sim(data_dir):
-    yield uproot.open(data_dir / "detsim.root")
+def f_test_rec(data_dir):
+    yield uproot.open(data_dir / "test_rec.root")
+
+
+@pytest.fixture(scope="session")
+def f_test_elec(data_dir):
+    yield uproot.open(data_dir / "test_elec.root")
 
 
 @pytest.fixture(scope="session")
