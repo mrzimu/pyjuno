@@ -1,5 +1,8 @@
 #include <cstdint>
 #include <memory>
+#include <sstream>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 #include <pybind11/pytypes.h>
