@@ -3,8 +3,7 @@
 #include <vector>
 
 #include <pybind11/pytypes.h>
-
-#include "uproot-custom/uproot-custom.hh"
+#include <uproot-custom/uproot-custom.hh>
 
 using namespace uproot;
 using namespace std;
@@ -21,10 +20,10 @@ class JMSmartRefReader : public IReader {
         , m_entry( make_shared<vector<int64_t>>() )
         , m_pidf( make_shared<vector<uint16_t>>() ) {}
 
-    void read( BinaryBuffer& buffer ) override {
-        buffer.skip_TObject();
-        m_pidf->push_back( buffer.read<uint16_t>() );
-        m_entry->push_back( buffer.read<int64_t>() );
+    void read( BinaryStream& stream ) override {
+        stream.skip_TObject();
+        m_pidf->push_back( stream.read<uint16_t>() );
+        m_entry->push_back( stream.read<int64_t>() );
     }
 
     py::object data() const override {
@@ -42,32 +41,32 @@ class AnyCLHEPClassReader : public IReader {
     AnyCLHEPClassReader( string name, vector<SharedReader> element_readers )
         : IReader( name ), m_element_readers( element_readers ) {}
 
-    void read( BinaryBuffer& buffer ) override {
-        auto fNBytes   = buffer.read_fNBytes();
-        auto start_pos = buffer.get_cursor();
-        auto end_pos   = buffer.get_cursor() + fNBytes;
+    void read( BinaryStream& stream ) override {
+        auto fNBytes   = stream.read_fNBytes();
+        auto start_pos = stream.get_cursor();
+        auto end_pos   = stream.get_cursor() + fNBytes;
 
-        auto fVersion = buffer.read_fVersion();
-        buffer.skip( 4 ); // unknown
+        auto fVersion = stream.read_fVersion();
+        stream.skip( 4 ); // unknown
 
         for ( auto& reader : m_element_readers )
         {
             debug_printf( "AnyCLHEPClassReader %s: reading %s\n", m_name.c_str(),
                           reader->name().c_str() );
-            debug_printf( buffer );
-            reader->read( buffer );
+            debug_printf( stream );
+            reader->read( stream );
         }
 
-        if ( buffer.get_cursor() != end_pos )
+        if ( stream.get_cursor() != end_pos )
         {
             stringstream msg;
             msg << "AnyCLHEPClassReader: Invalid read length for " << name() << "! Expect "
-                << end_pos - start_pos << ", got " << buffer.get_cursor() - start_pos;
+                << end_pos - start_pos << ", got " << stream.get_cursor() - start_pos;
             throw std::runtime_error( msg.str() );
         }
     }
 
-    uint32_t read_many_memberwise( BinaryBuffer& buffer, const int64_t count ) override {
+    uint32_t read_many_memberwise( BinaryStream& stream, const int64_t count ) override {
         if ( count < 0 )
         {
             stringstream msg;
@@ -79,8 +78,8 @@ class AnyCLHEPClassReader : public IReader {
         {
             debug_printf( "AnyCLHEPClassReader %s: reading memberwise %s\n", m_name.c_str(),
                           reader->name().c_str() );
-            debug_printf( buffer );
-            reader->read_many( buffer, count );
+            debug_printf( stream );
+            reader->read_many( stream, count );
         }
 
         return count;
