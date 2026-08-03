@@ -15,10 +15,10 @@ import uproot.reading
 import uproot_custom.cpp
 from uproot._util import regularize_filter
 from uproot_custom import (
+    AnyPointerFactory,
     AsCustom,
     Factory,
     GroupFactory,
-    AnyPointerFactory,
     build_factory,
     registered_factories,
 )
