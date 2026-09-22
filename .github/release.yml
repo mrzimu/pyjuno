@@ -5,8 +5,12 @@ changelog:
         - feature
     - title: Bug Fixes and Performance Improvements
       labels:
-        - bug fix
+        - bug
+        - fix
         - performance
+    - title: Refactorings
+      labels:
+        - refactor
     - title: Other Changes
       labels:
         - '*'
