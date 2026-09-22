@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from typing import Union
 
 import awkward as ak
 import awkward.contents
@@ -222,9 +221,9 @@ def entry2count(ref_entries, n_cols):
 
 def assemble_event(
     file,
-    filter_path: Union[str, list[str]] = None,
-    entry_start: int = None,
-    entry_stop: int = None,
+    filter_path: str | list[str] | None = None,
+    entry_start: int | None = None,
+    entry_stop: int | None = None,
 ) -> ak.Array:
     """
     Assemble all events according to the navigator information.
