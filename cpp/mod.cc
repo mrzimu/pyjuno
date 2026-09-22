@@ -121,7 +121,8 @@ py::array_t<int64_t> entry_buffer_to_count( py::dict entry_buffer, int64_t n_col
 
     auto len = offsets.size() - 1;
     py::array_t<int64_t> res( len * n_cols );
-    res = res.reshape( { static_cast<py::ssize_t>( len ), static_cast<py::ssize_t>( n_cols ) } );
+    res =
+        res.reshape( { static_cast<py::ssize_t>( len ), static_cast<py::ssize_t>( n_cols ) } );
 
     auto res_ptr = res.mutable_data();
 
