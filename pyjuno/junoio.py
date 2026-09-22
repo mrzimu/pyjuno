@@ -5,8 +5,6 @@ import re
 import awkward as ak
 import awkward.contents
 import awkward.forms
-import awkward.index
-import numba as nb
 import numpy as np
 import uproot.behaviors.TTree
 import uproot.model
@@ -22,7 +20,11 @@ from uproot_custom import (
     registered_factories,
 )
 
-from pyjuno.pyjuno_cpp import AnyCLHEPClassReader, JMSmartRefReader
+from pyjuno.pyjuno_cpp import (
+    AnyCLHEPClassReader,
+    JMSmartRefReader,
+    entry_buffer_to_count,
+)
 
 
 class JMSmartRefFactory(Factory):
@@ -210,15 +212,6 @@ def get_event_tree(subevt_dir: uproot.reading.ReadOnlyDirectory):
         return tree
 
 
-@nb.njit(cache=True)
-def entry2count(ref_entries, n_cols):
-    res = np.zeros((len(ref_entries), n_cols), dtype=np.int64)
-    for i, row in enumerate(ref_entries):
-        for j, val in enumerate(row):
-            res[i, j] = 0 if val == -1 else 1
-    return res
-
-
 def assemble_event(
     file,
     filter_path: str | list[str] | None = None,
@@ -242,7 +235,7 @@ def assemble_event(
 
     assert n_cols == len(nav_paths)
 
-    ref_counts = entry2count(ref_entry, n_cols)
+    ref_counts = entry_buffer_to_count(ak.to_buffers(ref_entry)[2], n_cols)
     exist_idx = [i for i, d in enumerate(nav_paths) if d in file]
 
     entry_start = 0 if entry_start is None else entry_start
