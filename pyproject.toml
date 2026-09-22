@@ -31,7 +31,6 @@ dependencies = [
     "uproot>=5.6.8",
     "awkward",
     "uproot-custom==2.4.*",
-    "numba",
 ]
 description = "Standalone Python module for JUNO"
 dynamic = ["version"]
