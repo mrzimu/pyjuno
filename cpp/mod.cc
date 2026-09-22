@@ -125,6 +125,7 @@ py::array_t<int64_t> entry_buffer_to_count( py::dict entry_buffer, int64_t n_col
         res.reshape( { static_cast<py::ssize_t>( len ), static_cast<py::ssize_t>( n_cols ) } );
 
     auto res_ptr = res.mutable_data();
+    memset( res_ptr, 0, sizeof( int64_t ) * len * n_cols );
 
     for ( int64_t i = 0; i < len; i++ )
     {
