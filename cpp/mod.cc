@@ -8,7 +8,7 @@
 #include <pybind11/pytypes.h>
 #include <uproot-custom/uproot-custom.hh>
 
-using namespace uproot;
+using namespace uproot_custom;
 using namespace std;
 
 class JMSmartRefReader : public IReader {
