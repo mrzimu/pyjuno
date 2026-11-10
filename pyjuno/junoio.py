@@ -190,20 +190,18 @@ uproot.classes["JM::FileMetaData"] = Model_JM_3a3a_FileMetaData
 uproot.classes["JM::UniqueIDTable"] = Model_JM_3a3a_UniqueIDTable
 
 
-def get_event_tree(subevt_dir: uproot.reading.ReadOnlyDirectory):
+def get_event_tree(
+    subevt_dir: uproot.reading.ReadOnlyDirectory,
+) -> uproot.behaviors.TTree.TTree | None:
     """
     This function finds the event tree in a sub-event directory.
     Assuming there is only one header tree and one event tree in the sub-event directory.
     """
-    # Check tree numbers
-    trees = [
-        tree for tree in subevt_dir.values() if isinstance(tree, uproot.behaviors.TTree.TTree)
-    ]
-    if len(trees) != 2:
-        raise ValueError(f"Expected 2 trees in sub-event directory, found {len(trees)} trees.")
-
     for tree in subevt_dir.values():
         if not isinstance(tree, uproot.behaviors.TTree.TTree):
+            continue
+
+        if tree.name.endswith("Header"):
             continue
 
         if "m_event" in tree and tree["m_event"].streamer.typename == "JM::SmartRef":
@@ -243,12 +241,23 @@ def assemble_event(
 
     reg_filter = regularize_filter(filter_path)
 
-    res = {}
+    valid_trees: list[tuple[int, uproot.behaviors.TTree.TTree]] = []
     for i in exist_idx:
         navpath = nav_paths[i]
         if not reg_filter(navpath):
             continue
 
+        if navpath == "/Event/Gen":  # /Event/Gen is not supported
+            continue
+
+        tree = get_event_tree(file[navpath])
+        if tree is None:
+            continue
+
+        valid_trees.append((i, tree))
+
+    res = {}
+    for i, tree in valid_trees:
         cur_entry_start = 0
         cur_entry_stop = ref_counts[:, i].sum()
         if entry_start is not None:
@@ -256,10 +265,6 @@ def assemble_event(
         if entry_stop is not None:
             cur_entry_stop = ref_counts[:entry_stop, i].sum()
 
-        if navpath == "/Event/Gen":  # /Event/Gen is not supported
-            continue
-
-        tree = get_event_tree(file[navpath])
         raw_array = tree.arrays(
             entry_start=cur_entry_start,
             entry_stop=cur_entry_stop,
