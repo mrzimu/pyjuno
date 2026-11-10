@@ -241,7 +241,7 @@ def assemble_event(
 
     reg_filter = regularize_filter(filter_path)
 
-    valid_trees: list[uproot.behaviors.TTree.TTree] = []
+    valid_trees: list[tuple[int, uproot.behaviors.TTree.TTree]] = []
     for i in exist_idx:
         navpath = nav_paths[i]
         if not reg_filter(navpath):
@@ -254,10 +254,10 @@ def assemble_event(
         if tree is None:
             continue
 
-        valid_trees.append(tree)
+        valid_trees.append((i, tree))
 
     res = {}
-    for i, tree in zip(exist_idx, valid_trees):
+    for i, tree in valid_trees:
         cur_entry_start = 0
         cur_entry_stop = ref_counts[:, i].sum()
         if entry_start is not None:
